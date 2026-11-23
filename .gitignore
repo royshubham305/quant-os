@@ -1,0 +1,14 @@
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+.cxx/
+
+# Release signing material: never publish the keystore or its passwords.
+signing.properties
+*.jks
+*.keystore
+
+# Built APKs go on the release page, not into git.
+dist/

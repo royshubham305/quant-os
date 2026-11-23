@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches MainActivity.DARK (#070b0e): window background before the
+         WebView paints, so there is no white flash on cold start. -->
+    <color name="boot_bg">#070b0e</color>
+</resources>

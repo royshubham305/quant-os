@@ -1,0 +1,83 @@
+plugins {
+    id 'com.android.application'
+}
+
+def signingProps = new Properties()
+def signingFile = rootProject.file('signing.properties')
+if (signingFile.exists()) {
+    signingFile.withInputStream { signingProps.load(it) }
+}
+
+android {
+    namespace 'dev.quant.os'
+    compileSdk 34
+
+    defaultConfig {
+        // Install identity kept from the Quartz build so copies already on
+        // phones (and a Play listing) update in place; only the name and code
+        // package moved to Quant.
+        applicationId 'dev.quartz.os'
+        minSdk 23
+        targetSdk 34
+        versionCode 196
+        versionName '1.9.6'
+        // Temporary side-by-side copy for device testing: ./gradlew assembleRelease -PtestCopy
+        if (project.hasProperty('testCopy')) {
+            applicationIdSuffix '.qtest'
+            versionNameSuffix '-qtest'
+        }
+        buildConfigField "boolean", "TEST_COPY", "${project.hasProperty('testCopy')}"
+        // Phones are arm64; x86_64 only matters for emulators (add -PwithX86).
+        ndk {
+            if (project.hasProperty('withX86')) abiFilters 'arm64-v8a', 'x86_64'
+            else abiFilters 'arm64-v8a'
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        release {
+            if (signingFile.exists()) {
+                storeFile rootProject.file(signingProps.getProperty('storeFile'))
+                storePassword signingProps.getProperty('storePassword')
+                keyAlias signingProps.getProperty('keyAlias')
+                keyPassword signingProps.getProperty('keyPassword')
+                enableV1Signing true
+                enableV2Signing true
+                enableV3Signing true
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (signingFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // Compress the native libraries and the HTML bundle inside the APK; the
+    // installer unpacks them on install, so the download is ~2.5x smaller.
+    packaging {
+        jniLibs {
+            useLegacyPackaging true
+        }
+    }
+}
+
+// The shell uses framework WebView APIs; androidx.webkit is the only supported
+// way to point every WebView in the process at the bundled tor.
+dependencies {
+    implementation 'androidx.webkit:webkit:1.13.0'
+    testImplementation 'junit:junit:4.13.2'
+}
