@@ -1223,6 +1223,10 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        if (surface != null && surface.inFullscreen()) {
+            surface.exitFullscreen();
+            return;
+        }
         if (web == null || backPending) {
             if (web == null) leaveApp();
             return;

@@ -17,6 +17,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
@@ -32,6 +33,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -63,6 +65,8 @@ public class BrowserActivity extends Activity {
     private ProgressBar progress;
     private ValueCallback<Uri[]> pendingFiles;
     private PermissionRequest pendingCamera;
+    private View fullView;
+    private WebChromeClient.CustomViewCallback fullCallback;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -163,8 +167,8 @@ public class BrowserActivity extends Activity {
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
-        s.setLoadWithOverviewMode(true);
-        s.setUseWideViewPort(true);
+        s.setLoadWithOverviewMode(false);
+        s.setUseWideViewPort(false);
         s.setSupportZoom(true);
         s.setBuiltInZoomControls(true);
         s.setDisplayZoomControls(false);
@@ -183,7 +187,7 @@ public class BrowserActivity extends Activity {
             @Override
             public void onPageStarted(WebView v, String url, android.graphics.Bitmap favicon) {
                 MainActivity.Identity.harden(v);
-                MainActivity.Identity.applyNavigation(v.getSettings(), url);
+                MainActivity.Identity.applyNavigation(v.getSettings(), url, true);
             }
 
             @Override
@@ -241,6 +245,28 @@ public class BrowserActivity extends Activity {
             public void onProgressChanged(WebView v, int value) {
                 progress.setProgress(value);
                 progress.setVisibility(value >= 100 ? View.GONE : View.VISIBLE);
+            }
+
+            /* HTML5 fullscreen (a video's fullscreen button) needs these two,
+               or the page believes fullscreen is unsupported. */
+            @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                ViewGroup content = findViewById(android.R.id.content);
+                if (fullView != null || content == null) {
+                    callback.onCustomViewHidden();
+                    return;
+                }
+                fullView = view;
+                fullCallback = callback;
+                content.addView(view, new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT));
+                hideAllBars();
+            }
+
+            @Override
+            public void onHideCustomView() {
+                hideFullscreen();
             }
 
             @Override
@@ -364,7 +390,7 @@ public class BrowserActivity extends Activity {
             return;
         }
         urlBar.clearFocus();
-        MainActivity.Identity.applyNavigation(web.getSettings(), url);
+        MainActivity.Identity.applyNavigation(web.getSettings(), url, true);
         web.loadUrl(url);
     }
 
@@ -415,6 +441,38 @@ public class BrowserActivity extends Activity {
                 Toast.LENGTH_LONG).show();
     }
 
+    /** Remove the page's fullscreen view and tell the page it is gone. */
+    private void hideFullscreen() {
+        if (fullView == null) return;
+        ViewGroup parent = (ViewGroup) fullView.getParent();
+        if (parent != null) parent.removeView(fullView);
+        fullView = null;
+        WebChromeClient.CustomViewCallback cb = fullCallback;
+        fullCallback = null;
+        if (cb != null) cb.onCustomViewHidden();
+        immersive();
+    }
+
+    private void hideAllBars() {
+        Window window = getWindow();
+        if (Build.VERSION.SDK_INT >= 30) {
+            View decor = window.getDecorView();
+            WindowInsetsController controller = decor == null ? null : decor.getWindowInsetsController();
+            if (controller == null) return;
+            controller.hide(WindowInsets.Type.systemBars());
+            controller.setSystemBarsBehavior(
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            return;
+        }
+        window.getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+    }
+
     private void immersive() {
         Window window = getWindow();
         if (Build.VERSION.SDK_INT >= 30) {
@@ -449,6 +507,10 @@ public class BrowserActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        if (fullView != null) {
+            hideFullscreen();
+            return;
+        }
         if (web == null || !web.canGoBack()) super.onBackPressed();
         else web.goBack();
     }
@@ -501,6 +563,7 @@ public class BrowserActivity extends Activity {
             pendingCamera.deny();
             pendingCamera = null;
         }
+        if (fullView != null) hideFullscreen();
         if (web != null) {
             web.destroy();
             web = null;

@@ -19,8 +19,8 @@ android {
         applicationId 'dev.quartz.os'
         minSdk 23
         targetSdk 34
-        versionCode 196
-        versionName '1.9.6'
+        versionCode 197
+        versionName '1.9.7'
         // Temporary side-by-side copy for device testing: ./gradlew assembleRelease -PtestCopy
         if (project.hasProperty('testCopy')) {
             applicationIdSuffix '.qtest'

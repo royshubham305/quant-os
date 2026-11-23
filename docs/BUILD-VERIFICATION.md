@@ -1,6 +1,6 @@
-# Build verification — Quant OS APK 1.9.6
+# Build verification — Quant OS APK 1.9.7
 
-Date: 2026-11-22
+Date: 2026-11-23
 Environment: Windows 10 x64, JDK 17.0.12, Gradle 8.11.1 (cached locally;
 the wrapper pins 8.10 and its download was blocked by the network here),
 AGP 8.5.2, Android SDK platform 34, build-tools 34.0.0.
@@ -10,27 +10,27 @@ AGP 8.5.2, Android SDK platform 34, build-tools 34.0.0.
 ```
 gradle :app:testReleaseUnitTest                 -> BUILD SUCCESSFUL (5/5 tests)
 gradle assembleRelease                          -> BUILD SUCCESSFUL
-apksigner verify -v dist/Quant-OS-1.9.6.apk
-zipalign -c 4 dist/Quant-OS-1.9.6.apk
-aapt2 dump badging dist/Quant-OS-1.9.6.apk
-unzip -p dist/Quant-OS-1.9.6.apk assets/quant-os.html | md5sum
-unzip -p dist/Quant-OS-1.9.6.apk assets/harden.js | md5sum
+apksigner verify -v dist/Quant-OS-1.9.7.apk
+zipalign -c 4 dist/Quant-OS-1.9.7.apk
+aapt2 dump badging dist/Quant-OS-1.9.7.apk
+unzip -p dist/Quant-OS-1.9.7.apk assets/quant-os.html | md5sum
+unzip -p dist/Quant-OS-1.9.7.apk assets/harden.js | md5sum
 ```
 
 ## Build results
 
 | Check | Result |
 |---|---|
-| APK size | 4,502,322 B (libtor 7.6 MB → 3.1 MB compressed; HTML 1.38 MB → 0.35 MB) |
-| APK md5 | `00e99d06c9df7d2001dd5b3969333495` (delivered `dist/Quant-OS-1.9.6.apk`) |
+| APK size | 4,503,318 B (libtor 7.6 MB → 3.1 MB compressed; HTML 1.38 MB → 0.35 MB) |
+| APK md5 | `dd0bbf9be6fff4b5880102d0d92bff3b` (delivered `dist/Quant-OS-1.9.7.apk`) |
 | Signature | v1 true, v2 true, v3 true; single signer `CN=Quartz OS, O=Quartz, C=XX` |
 | Signer SHA-256 | `d7c5e36eff3bc95a029edd6311925b0fed72c3bafdce8e8a94f12f67e3f0b4a4` |
 | zipalign -c 4 | successful |
-| Package | `dev.quartz.os`, versionCode 196, versionName 1.9.6 |
+| Package | `dev.quartz.os`, versionCode 197, versionName 1.9.7 |
 | SDK | min 23, target 34, compile 34 |
 | Native libraries | `libtor.so`, arm64-v8a only (emulator builds: add `-PwithX86`); compressed in the APK, `extractNativeLibs=true` so the installer unpacks them |
 | Classes in classes.dex | MainActivity, NativeSurface, BrowserActivity, AdBlock, Handoff, TorEngine, WebViewProxy, TorNotification, org.torproject.jni.TorService |
-| Embedded assets | `assets/quant-os.html` md5 `9829074bd28c4925309c5223e361855d`; `assets/harden.js` md5 `561f47a07c53ea97a24e93dbfe68db63` = source files |
+| Embedded assets | `assets/quant-os.html` md5 `f8b225515e87ad9d90d98d3a950dd7e3`; `assets/harden.js` md5 `561f47a07c53ea97a24e93dbfe68db63` = source files |
 | AdBlock unit test | 5/5 passed (exact host, subdomain, uppercase, near-miss, null/empty) |
 
 The earlier 1,459,564 B figure in this file described a build made before
@@ -45,7 +45,10 @@ on 2026-11-22. The APK was installed as a side-by-side copy
 
 | Test | Result |
 |---|---|
-| Cold start | `am start -W` reported TotalTime 187 ms (1.9.5 run); OS desktop rendered, title bar shows v1.9.6 |
+| Mobile layout in full-screen browser (1.9.7) | `dev.quant.os.BrowserActivity` opened with `https://m.youtube.com/watch?v=…`: the page rendered at device width in mobile layout, all content inside the screen (before 1.9.7 it rendered desktop-width and clipped; the activity now forces the profile's mobile UA and a device-width viewport) |
+| Video fullscreen, full-screen browser (1.9.7) | The player's "Enter full screen" control put the video over the whole screen, browser toolbar and system bars hidden; the page reported `document.fullscreenEnabled` true (before 1.9.7 it answered full screen unavailable). Back returned to the normal browser view with the page intact — the toolbar came back and history stayed on the video |
+| Video fullscreen, OS browser window (1.9.7) | The same control inside the Web app's native page surface covered the whole app (OS title bar and taskbar hidden). Back exited fullscreen instead of closing the page (new Back guard while a video is fullscreen) |
+| Cold start | `am start -W` reported TotalTime 187 ms (1.9.5 run); OS desktop rendered, title bar shows v1.9.7 |
 | In-window browser | Web app opened inside its OS window (toolbar, tabs and taskbar visible), no jump to a full-screen activity |
 | Real page in window | `example.com` rendered in the native surface |
 | Navigation | DuckDuckGo loaded and searched; results rendered in the same window |
@@ -69,15 +72,16 @@ During device testing the code gained media-consent log lines on tag `QuantOS`
 
 ## Rebuild note
 
-The 1.9.6 build was made once from this tree (md5
-`00e99d06c9df7d2001dd5b3969333495`). The earlier 1.9.2 pair of builds matched
+The 1.9.7 build was made once from this tree (md5
+`dd0bbf9be6fff4b5880102d0d92bff3b`). The earlier 1.9.2 pair of builds matched
 byte for byte; that claim stays with 1.9.2. Trust the content checks (asset
 md5, class list, manifest) first.
 
 ## Not verified
 
-- The full-screen `BrowserActivity` (reachable only through an in-app
-  hand-off) was not exercised beyond its WebView configuration.
+- The full-screen `BrowserActivity` was exercised on 1.9.7 for rendering and
+  video fullscreen only; its file picker/upload, camera consent and downloads
+  were not exercised there.
 - File picker / upload, link downloads handled by DownloadManager, and
   geolocation (the app has no location permission) were not exercised.
 - The store-installed package was not updated or tested; the device run used

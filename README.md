@@ -1,7 +1,7 @@
 # Quant OS — Android shell
 
 Buildable Android project for the Quant OS WebView wrapper. The OS itself is
-`app/src/main/assets/quant-os.html` (the 1.9.6 single-file build); the Java in
+`app/src/main/assets/quant-os.html` (the 1.9.7 single-file build); the Java in
 `app/src/main/java/dev/quant/os/` only provides the shell: a WebView on a
 virtual https origin, a native page surface for the OS browser app, an identity
 store, an ad/tracking blocklist, a full in-app browser activity, and a
@@ -9,7 +9,7 @@ notification-shade internet switch.
 
 Code package `dev.quant.os`; the install ID (applicationId) stays
 `dev.quartz.os` so a phone that already has the app updates in place instead of
-installing a second copy. versionName `1.9.6`, versionCode `196`, minSdk 23,
+installing a second copy. versionName `1.9.7`, versionCode `197`, minSdk 23,
 target/compile SDK 34.
 
 ## Build
@@ -66,7 +66,7 @@ docs/BUILD-VERIFICATION.md                what was actually built and checked he
 - The page is served from `https://appassets.androidplatform.net` by a client
   that reads `assets/` directly, so localStorage, secure-context APIs and
   service workers behave as on the web with no network connection.
-- `assets/quant-os.html` at 1.9.6 has md5 `9829074bd28c4925309c5223e361855d`.
+- `assets/quant-os.html` at 1.9.7 has md5 `f8b225515e87ad9d90d98d3a950dd7e3`.
   Since 1.9.1 this file is the APK build, not a byte copy of the web edition:
   the APK replaces the `__QZ_TOKEN__` marker with a random token on every
   launch. Drop the same file on a web server and the bridge stays dormant.
@@ -83,6 +83,11 @@ docs/BUILD-VERIFICATION.md                what was actually built and checked he
   (APK only). Desktop uses the profile persona's desktop UA with a wide
   viewport; Mobile uses the profile's mobile persona UA with a device-width
   viewport and reloads the page. The choice is remembered across launches.
+- Video fullscreen (1.9.7): a video's fullscreen button works in both the Web
+  app's page surface and the full-screen in-app browser. The video fills the
+  whole screen, the OS chrome and status bars step aside, and Back (or the
+  page's own exit button) returns to the page. The full-screen in-app browser
+  always renders in Mobile mode, so sites fit a phone screen.
 - Cookies: the OS identity settings are applied to both the shell and the
   in-app browser — session-only, persistent, or blocked per site.
 - WebRTC, `navigator.mediaDevices.enumerateDevices`, `performance.memory`,
@@ -141,17 +146,21 @@ docs/BUILD-VERIFICATION.md                what was actually built and checked he
 ## Verification performed
 
 See `docs/BUILD-VERIFICATION.md`. Short version: the blocklist unit test passed
-(5/5), the 1.9.6 APK built (4,502,322 B — arm64-only, libraries and the HTML
-bundle compressed inside the APK, signed v1+v2+v3, zip-aligned, versionCode 196
-/ versionName 1.9.6) and is copied to `dist/Quant-OS-1.9.6.apk` (md5
-`00e99d06c9df7d2001dd5b3969333495`). It was also
-installed on a real phone as a side-by-side test copy: the desktop boots, sites
-render inside the OS window, the camera consent dialog works for both Allow and
-Deny, the Editor's download wrote a file to the phone's Downloads folder, and
-browserleaks.com/webrtc reported RTCPeerConnection False, no local or public IP,
-"No Leak" — including the hidden-frame trick the site uses to borrow the
-constructor. The full-screen in-app browser and the file picker were not
-exercised. The 1.9.6 qtest build showed the ongoing "Quant OS internet"
+(5/5), the 1.9.7 APK built (4,503,318 B — arm64-only, libraries and the HTML
+bundle compressed inside the APK, signed v1+v2+v3, zip-aligned, versionCode 197
+/ versionName 1.9.7) and is copied to `dist/Quant-OS-1.9.7.apk` (md5
+`dd0bbf9be6fff4b5880102d0d92bff3b`). On 1.9.7 a real phone ran YouTube inside
+the full-screen in-app browser in mobile layout with everything on screen, and
+the player's fullscreen button covered the whole screen (toolbar and status
+bars hidden, Back returning to the page); the same worked inside the Web app's
+page surface, where Back leaves fullscreen before closing the page. The same
+build was also installed on a real phone as a side-by-side test copy: the
+desktop boots, sites render inside the OS window, the camera consent dialog
+works for both Allow and Deny, the Editor's download wrote a file to the
+phone's Downloads folder, and browserleaks.com/webrtc reported RTCPeerConnection
+False, no local or public IP, "No Leak" — including the hidden-frame trick the
+site uses to borrow the constructor. The file picker was not exercised. The
+1.9.6 qtest build showed the ongoing "Quant OS internet"
 notification in the shade reading "Internet is off (Tor is off)" with the
 action "Turn internet on"; the action's exact intent (the activity with
 `torToggle=true`) turned Tor on — notification "Internet is on through Tor",

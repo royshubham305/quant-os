@@ -1,6 +1,7 @@
 package dev.quant.os;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
@@ -9,6 +10,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.util.TypedValue;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.DownloadListener;
 import android.webkit.PermissionRequest;
 import android.webkit.RenderProcessGoneDetail;
@@ -55,6 +57,8 @@ class NativeSurface extends FrameLayout {
     private volatile int pw = 1, ph = 1;
     private volatile String renderer = "ok";
     private volatile boolean mobile;
+    private View fullView;
+    private WebChromeClient.CustomViewCallback fullCallback;
 
     NativeSurface(Context context, Listener listener) {
         super(context);
@@ -277,6 +281,28 @@ class NativeSurface extends FrameLayout {
                 event(json(m));
             }
 
+            /* HTML5 fullscreen (a video's fullscreen button) needs these two,
+               or the page believes fullscreen is unsupported. */
+            @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                ViewGroup content = getContext() instanceof Activity
+                        ? ((Activity) getContext()).findViewById(android.R.id.content) : null;
+                if (fullView != null || content == null) {
+                    callback.onCustomViewHidden();
+                    return;
+                }
+                fullView = view;
+                fullCallback = callback;
+                content.addView(view, new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT));
+            }
+
+            @Override
+            public void onHideCustomView() {
+                exitFullscreen();
+            }
+
             @Override
             public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb,
                                              FileChooserParams params) {
@@ -364,6 +390,7 @@ class NativeSurface extends FrameLayout {
     }
 
     void hide() {
+        exitFullscreen();
         shown = false;
         setVisibility(GONE);
         web.stopLoading();
@@ -391,6 +418,21 @@ class NativeSurface extends FrameLayout {
         return loaded;
     }
 
+    /** True while a page's fullscreen video covers the whole app. */
+    boolean inFullscreen() {
+        return fullView != null;
+    }
+
+    void exitFullscreen() {
+        if (fullView == null) return;
+        ViewGroup parent = (ViewGroup) fullView.getParent();
+        if (parent != null) parent.removeView(fullView);
+        fullView = null;
+        WebChromeClient.CustomViewCallback cb = fullCallback;
+        fullCallback = null;
+        if (cb != null) cb.onCustomViewHidden();
+    }
+
     void onPause() {
         web.onPause();
     }
@@ -401,6 +443,7 @@ class NativeSurface extends FrameLayout {
 
     void release() {
         hide();
+        exitFullscreen();
         web.destroy();
     }
 
