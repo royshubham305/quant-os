@@ -1,16 +1,44 @@
-# Quant OS — Android shell
+# Quant OS — anonymous OS with Tor built in
 
-Buildable Android project for the Quant OS WebView wrapper. The OS itself is
-`app/src/main/assets/quant-os.html` (the 1.9.7 single-file build); the Java in
-`app/src/main/java/dev/quant/os/` only provides the shell: a WebView on a
-virtual https origin, a native page surface for the OS browser app, an identity
-store, an ad/tracking blocklist, a full in-app browser activity, and a
-notification-shade internet switch.
+Quant OS is a small operating system that runs as an Android app. Tor is the
+only way it reaches the internet: while Tor is off, the app says Offline and
+every page stays closed, so no site can see the phone's real address. The app
+also ships a Brave-style ad and tracker blocker, its own browser, per-identity
+browser personas, and a J2ME (old mobile Java) game runtime.
 
-Code package `dev.quant.os`; the install ID (applicationId) stays
-`dev.quartz.os` so a phone that already has the app updates in place instead of
-installing a second copy. versionName `1.9.7`, versionCode `197`, minSdk 23,
-target/compile SDK 34.
+![Quant OS desktop with Tor off](docs/screenshots/desktop-tor-off.png)
+
+## What is inside the APK
+
+- **Tor, in-process.** Bundled libtor 0.4.9.17 starts inside the app. Every
+  WebView request and every OS network tool is pointed at its SOCKS port, and
+  requests are refused while Tor is not connected. There is no VPN service, so
+  other apps are not routed.
+- **Ads and trackers blocked before they leave.** A 139-host blocklist is
+  checked on both browser surfaces before a request is made. The Web app also
+  has a Shields panel with a per-site count and an unhide list.
+- **One identity for the whole OS.** Browser personas (user agent, client
+  hints), editable hostname/MAC/private IP, per-site cookie rules
+  (session/persistent/block), and an optional virtual egress address that
+  re-rolls when the identity is rotated or burned.
+- **Two browsers.** A page surface inside the OS window, and a full-screen
+  in-app browser. Both have Desktop | Mobile rendering and HTML5 video
+  fullscreen.
+- **Apps.** J2ME games (Snake, Brick, Tetris, Invaders, Pong, Device Info),
+  Files, Editor, Terminal, Notes, Music, Weather, Camera, Photos, Clock,
+  Calendar, Calculator, Settings.
+- **Internet switch in the notification shade.** One button turns Tor (and so
+  the internet) on or off without opening the app.
+
+## Screenshots
+
+From the 1.9.7 APK on a real phone, Tor off, so what the OS does with no
+internet is visible.
+
+| | |
+|---|---|
+| ![Boot](docs/screenshots/boot.png)<br>Boot: a dark screen with a progress bar, then the desktop | ![Desktop, Tor off](docs/screenshots/desktop-tor-off.png)<br>Desktop with Tor off: OFFLINE, "Tor is off · internet off" |
+| ![Web app while Tor is off](docs/screenshots/web-app-tor-off.png)<br>Web app while Tor is off: the address shown is a placeholder from the identity | ![Page closed](docs/screenshots/tor-gate.png)<br>Typed a site while Tor is off: the page stays closed |
 
 ## Build
 
@@ -42,6 +70,11 @@ differently signed APK needs the old copy uninstalled before installing.
 
 ## Layout
 
+Code package `dev.quant.os`. The install ID (applicationId) is `dev.quartz.os`,
+so a phone that already has the app updates in place instead of installing a
+second copy. versionName 1.9.7, versionCode 197, minSdk 23, target/compile SDK
+34.
+
 ```
 app/src/main/AndroidManifest.xml          package, permissions, both activities
 app/src/main/java/dev/quant/os/MainActivity.java     shell, asset origin, identity store
@@ -59,6 +92,7 @@ app/src/main/assets/harden.js            document-start page hardening (see Beha
 app/src/main/res/                         launcher icons, theme, boot colour, app name
 app/src/test/java/dev/quant/os/AdBlockTest.java      JVM unit test for the blocklist
 docs/BUILD-VERIFICATION.md                what was actually built and checked here
+docs/screenshots/                         README screenshots
 ```
 
 ## Behaviour notes
